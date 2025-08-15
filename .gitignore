@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+.env
+*.env
+*.log
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Playwright (로그인토큰/캐시 등)
+playwright/.auth/
+playwright/.cache/
+test-results/
+trace/
+*.zip
+
+# Jupyter / data
+.ipynb_checkpoints/
+*.sqlite3
+
+# 기타
+dist/
+build/
