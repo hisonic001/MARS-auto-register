@@ -35,8 +35,8 @@ def process_customer_form(page, customer_data):
     return True
 
 def process_vehicle_form(page, vehicle_data):
-    """차량 정보 양식을 채웁니다."""
-    license_plate = vehicle_data.get('번호판 번호', '번호판 없음')
+    """(수정됨) 차량 정보 양식을 채우고, '차량 종류'를 영문으로 변환합니다."""
+    license_plate = vehicle_data.get('번호판 번호')
     print(f"-> '{license_plate}' 차량 정보 처리 중...")
     
     main_frame = page.frame_locator("iframe[title=\"Main Content\"]")
@@ -48,8 +48,26 @@ def process_vehicle_form(page, vehicle_data):
         main_frame.get_by_role("textbox", name="번호판 번호").wait_for(timeout=5000)
     
     print("-> 차량 정보 입력 중...")
+
+    # --- [핵심 수정] 차량 종류 한글 -> 영문 변환 로직 ---
+    vehicle_type_map = {
+        "가솔린": "Fuel",
+        "디젤": "Diesel", # 'Disel'이 아닌 'Diesel'이 올바른 표기일 가능성이 높습니다.
+        "하이브리드": "Hybrid",
+        "전기차": "BEV"
+    }
+    korean_vehicle_type = vehicle_data.get('차량 종류', '')
+    # 맵에서 영문 값을 찾고, 만약 맵에 없는 값이면 원래 값을 그대로 사용합니다. (예: LPG)
+    english_vehicle_type = vehicle_type_map.get(korean_vehicle_type, korean_vehicle_type)
+    
+    print(f"-> 차량 종류 변환: '{korean_vehicle_type}' -> '{english_vehicle_type}'")
+    # --- [수정 끝] ---
+
     main_frame.get_by_role("textbox", name="번호판 번호").fill(license_plate)
-    main_frame.get_by_role("combobox", name="차량 종류").select_option(label=vehicle_data.get('차량 종류', ''))
+    
+    # 변환된 영문 값으로 입력합니다.
+    main_frame.get_by_role("combobox", name="차량 종류").select_option(label=english_vehicle_type)
+    
     main_frame.get_by_role("combobox", name="제조사").fill(vehicle_data.get('제조사', ''))
     main_frame.get_by_role("combobox", name="모델").fill(vehicle_data.get('모델', ''))
     main_frame.get_by_role("textbox", name="차량 연도").fill(str(vehicle_data.get('차량 연도', '')))
@@ -81,21 +99,18 @@ def create_customer_and_vehicle(page, data_row):
         error_message_locator = main_frame.locator(".ms-nav-validationmessage-error")
 
         try:
-            # 오류 메시지가 나타날 때까지 최대 3초만 기다려봅니다.
             error_message_locator.wait_for(state="visible", timeout=3000)
             error_text = error_message_locator.inner_text()
             print(f"  - ⚠️ 유효성 검사 오류 발견: '{error_text}'")
-            page.pause() # 오류 확인을 위해 일시정지
+            page.pause()
 
         except TimeoutError:
             print("  - ✅ 오류 없음. 정상적으로 저장된 것으로 보입니다.")
-            # 성공 후 다음 단계로 넘어가기 전, 페이지가 안정화될 시간을 줍니다.
             page.wait_for_timeout(2000)
-                # --- 이 부분이 새로 추가되었습니다 ---
-        # 최종 '확인' 버튼을 클릭하여 저장합니다.
+        
         if not click_in_main_frame(page, role="button", name="확인", description="고객/차량 정보 최종 저장"):
             return False
-        # --- 여기까지 추가 ---
+
         print(f"--- '{customer_name}' 고객 전체 프로세스 완료 ---")
         return True
 
